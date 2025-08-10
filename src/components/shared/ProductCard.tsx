@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Product } from '@prisma/client';
 import { ShoppingCart } from 'lucide-react';
 import { formatPriceCOP } from '@/lib/utils/currency.utils';
+import { useCart } from '@/hooks';
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +14,15 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onAddToCart }: ProductCardProps) {
+  const { getItemQuantity } = useCart();
+  const quantityInCart = getItemQuantity(product.id);
+  const availableStock = Math.max(0, product.stock - quantityInCart);
+  
+  const handleAddToCart = () => {
+    if (availableStock > 0) {
+      onAddToCart(product);
+    }
+  };
 
   return (
     <Card className="h-full flex flex-col">
@@ -36,19 +46,26 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
           <p className="text-2xl font-bold">
             {formatPriceCOP(Number(product.price))}
           </p>
-          <Badge variant={product.stock > 5 ? "default" : "destructive"}>
-            {product.stock} disponibles
-          </Badge>
+          <div className="flex flex-col gap-1">
+            <Badge variant={availableStock > 5 ? "default" : availableStock > 0 ? "secondary" : "destructive"}>
+              {availableStock} disponibles
+            </Badge>
+            {quantityInCart > 0 && (
+              <Badge variant="outline" className="text-xs">
+                {quantityInCart} en carrito
+              </Badge>
+            )}
+          </div>
         </div>
       </CardContent>
       <CardFooter>
         <Button
           className="w-full"
-          onClick={() => onAddToCart(product)}
-          disabled={product.stock === 0}
+          onClick={handleAddToCart}
+          disabled={availableStock === 0}
         >
           <ShoppingCart className="mr-2 h-4 w-4" />
-          {product.stock === 0 ? 'Agotado' : 'Agregar al carrito'}
+          {availableStock === 0 ? 'Sin stock' : 'Agregar al carrito'}
         </Button>
       </CardFooter>
     </Card>

@@ -28,15 +28,24 @@ export const useCart = () => {
 };
 
 export const useAddToCart = () => {
-  const { addItem } = useCartStore();
+  const { addItem, getItemQuantity } = useCartStore();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (product: any) => {
-      // Simulate API call delay
+      // Simulate API call delay - no validation here since onMutate handles it
       await new Promise(resolve => setTimeout(resolve, 100));
       return product;
     },
     onMutate: async (product) => {
+      // Check stock before adding
+      const currentQuantity = getItemQuantity(product.id);
+      const availableStock = product.stock - currentQuantity;
+      
+      if (availableStock <= 0) {
+        return;
+      }
+
       // Optimistic update
       addItem({
         productId: product.id,
@@ -45,16 +54,20 @@ export const useAddToCart = () => {
         imageUrl: product.imageUrl,
         storeId: product.storeId,
         storeName: product.store?.name || 'Tienda',
+        storeSlug: product.store?.slug,
         stock: product.stock,
       });
       
-      toast.success(`${product.name} agregado al carrito`);
+      toast.success(`${product.name} agregado al carrito`, {richColors: true});
     },
     onError: (error, product) => {
-      // Revert optimistic update on error
+      // Revert optimistic updates on error
       const { removeItem } = useCartStore.getState();
       removeItem(product.id);
-      toast.error('Error al agregar al carrito');
+      
+      // No need to revert product cache since we don't modify it
+      
+      toast.error(error.message || 'Error al agregar al carrito', {richColors:true});
     },
   });
 };
@@ -69,10 +82,10 @@ export const useRemoveFromCart = () => {
     },
     onMutate: async (productId) => {
       removeItem(productId);
-      toast.success('Producto eliminado del carrito');
+      toast.success('Producto eliminado del carrito', {richColors: true});
     },
-    onError: (error, productId, context) => {
-      toast.error('Error al eliminar del carrito');
+    onError: () => {
+      toast.error('Error al eliminar del carrito', {richColors: true});
     },
   });
 };
@@ -88,8 +101,8 @@ export const useUpdateCartQuantity = () => {
     onMutate: async ({ productId, quantity }) => {
       updateQuantity(productId, quantity);
     },
-    onError: (error, { productId, quantity }) => {
-      toast.error('Error al actualizar cantidad');
+    onError: () => {
+      toast.error('Error al actualizar cantidad', {richColors: true});
     },
   });
 };
@@ -99,7 +112,7 @@ export const useCheckout = () => {
   const { clearCart } = useCartStore();
 
   return useMutation({
-    mutationFn: async (orderData: any) => {
+    mutationFn: async (orderData: object) => {
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -110,13 +123,31 @@ export const useCheckout = () => {
       }
       return response.json();
     },
-    onSuccess: (order) => {
-      clearCart();
+    onSuccess: (orderResponse, orderData: any) => {
+      // Invalidate all relevant queries to update stock
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast.success('Orden creada exitosamente');
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['stores'] });
+      queryClient.invalidateQueries({ queryKey: ['store'] });
+      
+      // Invalidate specific store queries if we have the store slug
+      if (orderData.storeSlug) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['products', orderData.storeSlug] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ['store', orderData.storeSlug] 
+        });
+      }
+      
+      toast.success('Orden creada exitosamente', {richColors: true});
     },
-    onError: (error) => {
-      toast.error('Error al procesar la orden');
+    onSettled: () => {
+      // Clear cart after all operations (success or error)
+      clearCart();
+    },
+    onError: () => {
+      toast.error('Error al procesar la orden', {richColors: true});
     },
   });
 };

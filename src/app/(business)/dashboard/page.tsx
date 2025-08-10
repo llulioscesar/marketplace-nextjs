@@ -1,6 +1,12 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
 import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Dashboard - Marketplace',
+  description: 'Panel de administración para negocios'
+};
 
 export default async function DashboardPage() {
     // Verificación del lado del servidor
