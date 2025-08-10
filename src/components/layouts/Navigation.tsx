@@ -1,12 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useSession, signOut } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Store, LogOut, User, LayoutDashboard } from 'lucide-react';
+import { ShoppingBag, Store, LogOut, User, LayoutDashboard, Package } from 'lucide-react';
+import { CartButton } from '@/components/shared';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Navigation() {
-  const { data: session } = useSession();
+  const { user, isAuthenticated, isBusiness, isCustomer } = useAuth();
 
   return (
     <nav className="border-b">
@@ -25,19 +27,31 @@ export default function Navigation() {
           </div>
 
           <div className="flex items-center space-x-4">
-            {session ? (
+            {isAuthenticated ? (
               <>
-                <Link href="/dashboard">
-                  <Button variant="ghost" size="sm">
-                    <LayoutDashboard className="h-4 w-4 mr-2" />
-                    Dashboard
-                  </Button>
-                </Link>
+                {isBusiness ? (
+                  <Link href="/dashboard">
+                    <Button variant="ghost" size="sm">
+                      <LayoutDashboard className="h-4 w-4 mr-2" />
+                      Dashboard
+                    </Button>
+                  </Link>
+                ) : (
+                  <>
+                    <CartButton />
+                    <Link href="/orders">
+                      <Button variant="ghost" size="sm">
+                        <Package className="h-4 w-4 mr-2" />
+                        Mis Órdenes
+                      </Button>
+                    </Link>
+                  </>
+                )}
                 <div className="flex items-center space-x-2">
                   <User className="h-4 w-4" />
-                  <span className="text-sm">{session.user?.name}</span>
+                  <span className="text-sm">{user?.name}</span>
                   <span className="text-xs bg-primary/10 px-2 py-1 rounded">
-                    {session.user?.role === 'BUSINESS' ? 'Negocio' : 'Cliente'}
+                    {isBusiness ? 'Negocio' : 'Cliente'}
                   </span>
                 </div>
                 <Button
