@@ -39,27 +39,31 @@ export default function RegisterForm() {
 
             if (!response.ok) {
                 if (data.code === 'EMAIL_ALREADY_EXISTS') {
-                    toast('Este email ya esta registrado', {
-                        position: 'top-center'
+                    toast.error('Este email ya esta registrado', {
+                        position: 'top-center',
+                        richColors: true,
                     });
                 } else if (data.details) {
 
                 } else {
-                    toast(data.error || 'Error al registrar', {
-                        position: 'top-center'
+                    toast.error(data.error || 'Error al registrar', {
+                        position: 'top-center',
+                        richColors: true,
                     });
                 }
                 return;
             }
 
-            toast('Registro exitoso', {
-                position: 'top-center'
+            toast.success('Registro exitoso', {
+                position: 'top-center',
+                richColors: true,
             })
             router.push('/login');
         } catch (error) {
             console.error(error);
-            toast('Error inesperado. Por favor, intenta nuevamente.', {
-                position: 'top-center'
+            toast.error('Error inesperado. Por favor, intenta nuevamente.', {
+                position: 'top-center',
+                richColors: true,
             });
         }
     }
