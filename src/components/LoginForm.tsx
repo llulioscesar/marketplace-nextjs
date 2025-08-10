@@ -42,6 +42,7 @@ export default function LoginForm() {
                         position: 'top-center',
                         richColors: true,
                     });
+                    form.reset({...data, password: ''})
                     return;
                 }
 
