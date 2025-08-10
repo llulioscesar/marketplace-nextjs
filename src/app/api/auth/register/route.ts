@@ -1,15 +1,7 @@
 import {NextRequest, NextResponse} from "next/server";
-import bcrypt from "bcryptjs";
-import {PrismaClient} from '@prisma/client';
 import {z} from 'zod';
 import {registerSchema} from "@/lib/validations/auth";
-
-const prisma = new PrismaClient();
-
-function sanitizeUser(user: any) {
-    const {password, ...userWithoutPassword} = user;
-    return userWithoutPassword;
-}
+import { AuthService } from "@/services/auth.service";
 
 export async function POST(request: NextRequest) {
     try {
@@ -24,10 +16,6 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({
                     error: 'Datos de registro invalidos',
                     code: 'VALIDATION_ERROR',
-                    /*details: error.errors.map(e => ({
-                        field: e.path.join('.'),
-                        message: e.message,
-                    }))*/
                 }, {
                     status: 400,
                 });
@@ -35,49 +23,25 @@ export async function POST(request: NextRequest) {
             throw error;
         }
 
-        const existingUser = await prisma.user.findUnique({
-            where: {email: validateData.email},
-        });
+        const result = await AuthService.register(validateData);
 
-        if (existingUser) {
+        if (result.error) {
             return NextResponse.json({
-                error: 'El email ya esta registrado',
-                code: 'EMAIL_ALREADY_EXISTS',
-                suggestion: 'Intenta iniciar sesion',
-            },{
-                status: 400,
+                error: result.error,
+                code: result.error.includes('registrado') ? 'EMAIL_ALREADY_EXISTS' : 'REGISTRATION_ERROR',
+                suggestion: result.error.includes('registrado') ? 'Intenta iniciar sesion' : undefined,
+            }, {
+                status: result.error.includes('registrado') ? 409 : 400,
             });
         }
-
-        const hashedPassword = await bcrypt.hash(validateData.password, 10);
-
-        const newUser = await prisma.user.create({
-            data: {
-                email: validateData.email.toLowerCase(),
-                password: hashedPassword,
-                name: validateData.name.trim(),
-                role: validateData.role,
-            }
-        });
 
         return NextResponse.json({
             success: true,
             message: 'Usuario registrado exitosamente',
-            user: sanitizeUser(newUser)
+            user: result.user
         }, { status: 201 });
     } catch (error) {
         console.error('Error en registro:', error);
-
-        // Error de Prisma
-        if (error instanceof Error && error.message.includes('P2002')) {
-            return NextResponse.json(
-                {
-                    error: 'Este email ya está registrado',
-                    code: 'EMAIL_ALREADY_EXISTS'
-                },
-                { status: 409 }
-            );
-        }
 
         return NextResponse.json(
             {

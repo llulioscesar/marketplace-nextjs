@@ -7,7 +7,7 @@ export function useAuth() {
         user: session?.user,
         isLoading: status === 'loading',
         isAuthenticated: status === 'authenticated',
-        isCustomer: session?.role === 'CUSTOMER',
-        isBusiness: session?.role === 'BUSINESS'
+        isCustomer: session?.user?.role === 'CUSTOMER',
+        isBusiness: session?.user?.role === 'BUSINESS'
     }
 }
