@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { StoreService } from '@/services/store.service';
+import { CustomerServices } from '@/services';
 
 export async function GET(
   request: Request,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const store = await StoreService.getStoreBySlugWithProducts(slug);
+    const store = await CustomerServices.CustomerStoreService.getStoreBySlugWithProducts(slug);
 
     if (!store) {
       return NextResponse.json(

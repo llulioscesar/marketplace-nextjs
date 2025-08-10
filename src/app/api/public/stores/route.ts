@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { StoreService } from '@/services/store.service';
+import { CustomerServices } from '@/services';
 
 export async function GET(request: Request) {
   try {
@@ -7,7 +7,7 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
 
-    const result = await StoreService.getAllStores({ page, limit });
+    const result = await CustomerServices.CustomerStoreService.getAllStores({ page, limit });
 
     return NextResponse.json(result);
   } catch (error) {

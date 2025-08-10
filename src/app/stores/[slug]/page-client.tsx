@@ -3,7 +3,9 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
-import { StoreHeader, ProductGrid, ProductLoadingSkeleton } from '@/components/shared';
+import { StoreHeader } from '@/components/stores';
+import { ProductGrid } from '@/components/products';
+import { ProductLoadingSkeleton } from '@/components/common/LoadingSkeletons';
 import { useStore, useAddToCart } from '@/hooks';
 
 interface Props {

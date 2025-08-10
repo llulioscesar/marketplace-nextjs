@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { ShoppingBag, Store, LogOut, User, LayoutDashboard, Package } from 'lucide-react';
-import { CartButton } from '@/components/shared';
+import { CartButton } from '@/components/cart';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function Navigation() {

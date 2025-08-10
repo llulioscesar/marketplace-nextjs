@@ -1,7 +1,9 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Pagination, StoreGrid, StoreLoadingSkeleton } from '@/components/shared';
+import { Pagination } from '@/components/common';
+import { StoreGrid } from '@/components/stores';
+import { StoreLoadingSkeleton } from '@/components/common/LoadingSkeletons';
 import { useStores } from '@/hooks';
 
 export default function StoresPageClient() {

@@ -3,7 +3,8 @@
 import { useCart } from '@/hooks';
 import { useAuth } from '@/hooks/useAuth';
 import { redirect } from 'next/navigation';
-import { CartSummary, CheckoutForm } from '@/components/checkout';
+import { CartSummary } from '@/components/cart';
+import { CheckoutForm } from '@/components/checkout';
 
 export default function CheckoutPage() {
   const { isAuthenticated, isCustomer } = useAuth();

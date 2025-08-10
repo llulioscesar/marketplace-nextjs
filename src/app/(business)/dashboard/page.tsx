@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description: 'Panel de administración para negocios'
 };
 
+import { DashboardClient } from '@/components/business';
+
 export default async function DashboardPage() {
     // Verificación del lado del servidor
     const session = await getServerSession(authOptions);
@@ -17,15 +19,5 @@ export default async function DashboardPage() {
         redirect('/unauthorized');
     }
 
-    return (
-        <div className="container mx-auto p-8">
-            <h1 className="text-3xl font-bold mb-6">
-                Dashboard de Negocio
-            </h1>
-            <p>Bienvenido, {session.user.name}</p>
-            <p>Tu rol es: {session.user.role}</p>
-
-            {/* Aquí va el contenido del dashboard */}
-        </div>
-    );
+    return <DashboardClient user={session.user} />;
 }

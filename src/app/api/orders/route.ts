@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
-import { prisma } from '@/lib/db';
+import { CustomerServices, BusinessServices } from '@/services';
 import { z } from 'zod';
 
-const createOrderSchema = z.object({
-  customerId: z.string(),
-  storeId: z.string(),
+const checkoutSchema = z.object({
   items: z.array(z.object({
     productId: z.string(),
     quantity: z.number().min(1),
-    unitPrice: z.number().min(0),
-    totalPrice: z.number().min(0)
+    storeId: z.string()
   })),
-  totalAmount: z.number().min(0)
+  shippingAddress: z.string().optional(),
+  notes: z.string().optional()
 });
 
 export async function POST(request: NextRequest) {
@@ -25,134 +23,35 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const validatedData = createOrderSchema.parse(body);
+    const validatedData = checkoutSchema.parse(body);
 
-    // Verify that the customer matches the session
-    if (validatedData.customerId !== session.user.id) {
-      return NextResponse.json({ error: 'Cliente no válido' }, { status: 403 });
-    }
-
-    // Verify store exists and get business info
-    const store = await prisma.store.findUnique({
-      where: { id: validatedData.storeId },
-      include: { business: true }
+    // Process checkout using CustomerCheckoutService
+    const result = await CustomerServices.CustomerCheckoutService.processCheckout({
+      items: validatedData.items,
+      customerId: session.user.id,
+      shippingAddress: validatedData.shippingAddress,
+      notes: validatedData.notes
     });
 
-    if (!store || !store.isActive) {
-      return NextResponse.json({ error: 'Tienda no encontrada o inactiva' }, { status: 404 });
+    if (!result.success) {
+      return NextResponse.json({ 
+        error: 'Error en el checkout',
+        details: result.errors
+      }, { status: 400 });
     }
 
-    // Verify all products exist and have sufficient stock
-    const productIds = validatedData.items.map(item => item.productId);
-    const products = await prisma.product.findMany({
-      where: {
-        id: { in: productIds },
-        storeId: validatedData.storeId,
-        isActive: true
-      }
-    });
-
-    if (products.length !== validatedData.items.length) {
-      return NextResponse.json({ error: 'Algunos productos no están disponibles' }, { status: 400 });
-    }
-
-    // Check stock and validate prices
-    for (const orderItem of validatedData.items) {
-      const product = products.find(p => p.id === orderItem.productId);
-      if (!product) {
-        return NextResponse.json({ 
-          error: `Producto no encontrado: ${orderItem.productId}` 
-        }, { status: 400 });
-      }
-
-      if (product.stock < orderItem.quantity) {
-        return NextResponse.json({ 
-          error: `Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Solicitado: ${orderItem.quantity}` 
-        }, { status: 400 });
-      }
-
-      // Validate price
-      const expectedPrice = Number(product.price);
-      if (Math.abs(orderItem.unitPrice - expectedPrice) > 0.01) {
-        return NextResponse.json({ 
-          error: `Precio incorrecto para ${product.name}` 
-        }, { status: 400 });
-      }
-    }
-
-    // Create order and order items in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Create the order
-      const order = await tx.order.create({
-        data: {
-          customerId: validatedData.customerId,
-          storeId: validatedData.storeId,
-          totalAmount: validatedData.totalAmount,
-          status: 'PENDING'
-        }
-      });
-
-      // Create order items and update product stock
-      for (const orderItem of validatedData.items) {
-        await tx.orderItem.create({
-          data: {
-            orderId: order.id,
-            productId: orderItem.productId,
-            quantity: orderItem.quantity,
-            unitPrice: orderItem.unitPrice,
-            totalPrice: orderItem.totalPrice
-          }
-        });
-
-        // Update product stock
-        await tx.product.update({
-          where: { id: orderItem.productId },
-          data: {
-            stock: {
-              decrement: orderItem.quantity
-            }
-          }
-        });
-      }
-
-      return order;
-    });
-
-    // Return order with related data
-    const orderWithDetails = await prisma.order.findUnique({
-      where: { id: result.id },
-      include: {
-        customer: {
-          select: { id: true, name: true, email: true }
-        },
-        store: {
-          select: { 
-            id: true, 
-            name: true, 
-            slug: true,
-            business: {
-              select: { id: true, name: true, email: true }
-            }
-          }
-        },
-        items: {
-          include: {
-            product: {
-              select: { id: true, name: true, imageUrl: true }
-            }
-          }
-        }
-      }
-    });
-
-    return NextResponse.json(orderWithDetails, { status: 201 });
+    return NextResponse.json({
+      success: true,
+      orderIds: result.orderIds,
+      message: 'Órdenes creadas exitosamente'
+    }, { status: 201 });
 
   } catch (error) {
     console.error('Error creating order:', error);
     
     if (error instanceof z.ZodError) {
       return NextResponse.json({ 
-        error: 'Datos de orden inválidos',
+        error: 'Datos de checkout inválidos',
         details: error.issues
       }, { status: 400 });
     }
@@ -172,69 +71,30 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
+    const status = searchParams.get('status') || undefined;
     const limit = parseInt(searchParams.get('limit') || '10');
-    const skip = (page - 1) * limit;
+    const offset = parseInt(searchParams.get('offset') || '0');
 
-    let whereCondition = {};
+    let orders;
     
     // Customers can only see their own orders
     if (session.user.role === 'CUSTOMER') {
-      whereCondition = { customerId: session.user.id };
+      orders = await CustomerServices.CustomerOrderService.getOrderHistory(
+        session.user.id,
+        { status, limit, offset }
+      );
     }
     // Business users can see orders from their stores
     else if (session.user.role === 'BUSINESS') {
-      whereCondition = {
-        store: {
-          businessId: session.user.id
-        }
-      };
+      orders = await BusinessServices.BusinessOrderService.getBusinessOrders(
+        session.user.id,
+        { status, limit, offset }
+      );
+    } else {
+      return NextResponse.json({ error: 'Rol no autorizado' }, { status: 403 });
     }
 
-    const [orders, totalOrders] = await Promise.all([
-      prisma.order.findMany({
-        where: whereCondition,
-        include: {
-          customer: {
-            select: { id: true, name: true, email: true }
-          },
-          store: {
-            select: { 
-              id: true, 
-              name: true, 
-              slug: true,
-              business: {
-                select: { id: true, name: true, email: true }
-              }
-            }
-          },
-          items: {
-            include: {
-              product: {
-                select: { id: true, name: true, imageUrl: true }
-              }
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit
-      }),
-      prisma.order.count({ where: whereCondition })
-    ]);
-
-    const totalPages = Math.ceil(totalOrders / limit);
-
-    return NextResponse.json({
-      orders,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalOrders,
-        hasNext: page < totalPages,
-        hasPrev: page > 1
-      }
-    });
+    return NextResponse.json({ orders });
 
   } catch (error) {
     console.error('Error fetching orders:', error);
