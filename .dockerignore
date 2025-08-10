@@ -1,0 +1,5 @@
+.docker
+.idea
+.git
+node_modules
+.next
