@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Eye } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Store {
   id: string;
@@ -48,9 +49,11 @@ export default function ProductCard({ product, onToggleStatus, onDelete }: Produ
     <Card>
       {product.imageUrl && (
         <div className="h-48 bg-gray-200 rounded-t-lg overflow-hidden">
-          <img
+          <Image
             src={product.imageUrl}
             alt={product.name}
+            width={400}
+            height={192}
             className="w-full h-full object-cover"
           />
         </div>

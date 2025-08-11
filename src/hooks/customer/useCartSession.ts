@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useCartStore } from '@/store';
+import { useCartStore } from '@/stores';
 
 export const useCartSession = () => {
   const { data: session, status } = useSession();

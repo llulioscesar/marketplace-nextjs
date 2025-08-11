@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Eye, Package } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface StoreData {
   id: string;
@@ -47,9 +48,11 @@ export default function StoreTable({ stores, onToggleStatus, onDelete }: StoreTa
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       {store.imageUrl && (
-                        <img
+                        <Image
                           src={store.imageUrl}
                           alt={store.name}
+                          width={48}
+                          height={48}
                           className="w-12 h-12 object-cover rounded"
                         />
                       )}

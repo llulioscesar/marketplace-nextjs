@@ -28,6 +28,7 @@ export interface BusinessOrderWithDetails extends Order {
 export interface BusinessOrderFilters {
   storeId?: string;
   status?: string;
+  search?: string;
   startDate?: Date;
   endDate?: Date;
   limit?: number;
@@ -47,7 +48,7 @@ export class BusinessOrderService {
    * Obtiene todas las órdenes de las tiendas del business
    */
   static async getBusinessOrders(businessId: string, filters: BusinessOrderFilters = {}): Promise<BusinessOrderWithDetails[]> {
-    const { storeId, status, startDate, endDate, limit = 20, offset = 0 } = filters;
+    const { storeId, status, search, startDate, endDate, limit = 20, offset = 0 } = filters;
 
     const where: any = {
       store: {
@@ -61,6 +62,14 @@ export class BusinessOrderService {
 
     if (status) {
       where.status = status;
+    }
+
+    if (search) {
+      where.OR = [
+        { id: { contains: search, mode: 'insensitive' } },
+        { customer: { name: { contains: search, mode: 'insensitive' } } },
+        { customer: { email: { contains: search, mode: 'insensitive' } } }
+      ];
     }
 
     if (startDate || endDate) {
@@ -103,6 +112,44 @@ export class BusinessOrderService {
     });
 
     return orders as BusinessOrderWithDetails[];
+  }
+
+  /**
+   * Obtiene el conteo total de órdenes con filtros
+   */
+  static async getBusinessOrdersCount(businessId: string, filters: Omit<BusinessOrderFilters, 'limit' | 'offset'> = {}): Promise<number> {
+    const { storeId, status, search, startDate, endDate } = filters;
+
+    const where: any = {
+      store: {
+        businessId
+      }
+    };
+
+    if (storeId) {
+      where.storeId = storeId;
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (search) {
+      where.OR = [
+        { id: { contains: search, mode: 'insensitive' } },
+        { customer: { name: { contains: search, mode: 'insensitive' } } },
+        { customer: { email: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) where.createdAt.gte = startDate;
+      if (endDate) where.createdAt.lte = endDate;
+    }
+
+    const count = await prisma.order.count({ where });
+    return count;
   }
 
   /**

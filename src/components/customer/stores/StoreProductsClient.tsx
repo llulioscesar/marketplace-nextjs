@@ -1,27 +1,26 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 import { StoreHeader } from '@/components/stores';
-import { ProductGrid } from '@/components/products';
+import { ProductGrid } from '@/components/customer/products';
 import { ProductLoadingSkeleton } from '@/components/common/LoadingSkeletons';
 import { useStore, useAddToCart } from '@/hooks';
+import { Product } from '@prisma/client';
 
 interface Props {
-  params: Promise<{ slug: string }>;
+  slug: string;
 }
 
-export default function StoreProductsPageClient({ params }: Props) {
-  const resolvedParams = useParams();
+export default function StoreProductsClient({ slug }: Props) {
   const router = useRouter();
   const { data: session } = useSession();
   const addToCartMutation = useAddToCart();
   
-  const slug = resolvedParams.slug as string;
   const { data: store, isLoading, error } = useStore(slug);
 
-  const handleAddToCart = (product: any) => {
+  const handleAddToCart = (product: Product) => {
     if (!session) {
       toast.error('Debes iniciar sesión para comprar', {richColors: true});
       router.push('/login');

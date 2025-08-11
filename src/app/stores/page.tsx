@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import StoresPageClient from './page-client';
+import { StoresListClient } from '@/components/customer/stores';
 
 export const metadata: Metadata = {
   title: 'Tiendas - Marketplace',
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function StoresPage() {
-  return <StoresPageClient />;
+  return <StoresListClient />;
 }

@@ -3,10 +3,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useCart, useCheckout } from '@/hooks';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/auth/useAuth';
 import { formatPriceCOP } from '@/lib/utils/currency.utils';
 import { ShoppingBag, User, MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
+interface OrderItem {
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+interface OrderData {
+  storeId: string;
+  storeName: string;
+  storeSlug: string;
+  items: OrderItem[];
+}
 
 export default function CheckoutForm() {
   const { items, total, itemCount } = useCart();
@@ -35,11 +49,11 @@ export default function CheckoutForm() {
         totalPrice: item.price * item.quantity
       });
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, OrderData>);
 
     // Process each store order
     for (const [storeId, orderData] of Object.entries(ordersByStore)) {
-      const orderTotal = orderData.items.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
+      const orderTotal = orderData.items.reduce((sum: number, item: OrderItem) => sum + item.totalPrice, 0);
       
       const order = {
         customerId: user.id,

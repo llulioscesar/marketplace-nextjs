@@ -1,9 +1,11 @@
-import StoreProductsPageClient from './page-client';
+import { StoreProductsClient } from '@/components/customer/stores';
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
-export default function StoreProductsPage({ params }: Props) {
-  return <StoreProductsPageClient params={params} />;
+export default async function StoreProductsPage({ params }: Props) {
+  const { slug } = await params;
+  
+  return <StoreProductsClient slug={slug} />;
 }

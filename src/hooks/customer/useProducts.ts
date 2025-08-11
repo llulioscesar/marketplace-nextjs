@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useProductsStore } from '@/store';
+import { useProductsStore } from '@/stores';
 
 const fetchProducts = async (storeSlug: string) => {
   const response = await fetch(`/api/public/stores/${storeSlug}/products`);

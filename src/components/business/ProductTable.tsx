@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Eye } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Store {
   id: string;
@@ -59,9 +60,11 @@ export default function ProductTable({ products, onToggleStatus, onDelete }: Pro
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       {product.imageUrl && (
-                        <img
+                        <Image
                           src={product.imageUrl}
                           alt={product.name}
+                          width={48}
+                          height={48}
                           className="w-12 h-12 object-cover rounded"
                         />
                       )}

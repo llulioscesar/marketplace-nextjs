@@ -8,6 +8,7 @@ import { useCart, useUpdateCartQuantity, useRemoveFromCart } from '@/hooks';
 import { formatPriceCOP } from '@/lib/utils/currency.utils';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import Image from 'next/image';
 
 export default function CartSummary() {
   const { items, total } = useCart();
@@ -89,9 +90,11 @@ export default function CartSummary() {
               return (
                 <div key={item.productId} className="flex items-center gap-4 p-4 border rounded-lg">
                   {item.imageUrl && (
-                    <img 
+                    <Image 
                       src={item.imageUrl} 
                       alt={item.name}
+                      width={64}
+                      height={64}
                       className="w-16 h-16 object-cover rounded-md"
                     />
                   )}

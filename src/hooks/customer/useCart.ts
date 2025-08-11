@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCartStore } from '@/store';
+import { useCartStore } from '@/stores';
 import { toast } from 'sonner';
 
 export const useCart = () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Package, Plus } from 'lucide-react';
@@ -9,7 +9,14 @@ import ProductFilters from './ProductFilters';
 import ProductsGrid from './ProductsGrid';
 import ProductTable from './ProductTable';
 import Link from 'next/link';
-import { toast } from 'sonner';
+import { useBusinessStore } from '@/stores/businessStore';
+import { 
+  useBusinessProductsManagement,
+  useToggleProductStatus,
+  useDeleteProduct
+} from '@/hooks/business/useBusinessProductsManagement';
+import { useBusinessStores } from '@/hooks/business/useBusinessStores';
+import { useDebounce } from '@/hooks/common/useDebounce';
 
 interface User {
   id: string;
@@ -18,185 +25,88 @@ interface User {
   role: string;
 }
 
-interface Store {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-interface ProductWithStore {
-  id: string;
-  name: string;
-  description?: string | null;
-  price: number;
-  stock: number;
-  imageUrl?: string | null;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  store: Store;
-}
-
 interface ProductsManagementProps {
   user: User;
 }
 
-interface PaginationInfo {
-  currentPage: number;
-  totalPages: number;
-  totalProducts: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-}
+export default function ProductsManagementClient({}: ProductsManagementProps) {
+  // Zustand state
+  const {
+    productsViewMode,
+    productsItemsPerPage,
+    productsFilters,
+    setProductsViewMode,
+    setProductsItemsPerPage,
+    setProductsFilters,
+  } = useBusinessStore();
 
-export default function ProductsManagementClient({ user }: ProductsManagementProps) {
-  const [products, setProducts] = useState<ProductWithStore[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedStore, setSelectedStore] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showActiveOnly, setShowActiveOnly] = useState(true);
+  // Local state for pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(12);
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    currentPage: 1,
-    totalPages: 1,
-    totalProducts: 0,
-    hasNext: false,
-    hasPrev: false
-  });
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
-  useEffect(() => {
-    fetchStores();
-  }, []);
+  // Debounce search query para evitar muchas peticiones
+  const debouncedSearchQuery = useDebounce(productsFilters.searchQuery, 300);
 
-  useEffect(() => {
-    if (stores.length > 0) {
-      setCurrentPage(1); // Reset to first page when filters change
-      fetchProducts();
-    }
-  }, [selectedStore, searchQuery, showActiveOnly, stores, itemsPerPage]);
+  // Prepare filters for API
+  const apiFilters = useMemo(() => ({
+    searchQuery: debouncedSearchQuery,
+    storeFilter: productsFilters.storeFilter,
+    isActive: productsFilters.showActiveOnly,
+    limit: productsItemsPerPage,
+    offset: (currentPage - 1) * productsItemsPerPage,
+  }), [
+    debouncedSearchQuery,
+    productsFilters.storeFilter,
+    productsFilters.showActiveOnly,
+    productsItemsPerPage,
+    currentPage
+  ]);
 
-  useEffect(() => {
-    if (stores.length > 0) {
-      fetchProducts();
-    }
-  }, [currentPage]);
+  // React Query hooks
+  const { data, isLoading, error } = useBusinessProductsManagement(apiFilters);
+  const { data: stores = [] } = useBusinessStores();
+  const toggleProductStatusMutation = useToggleProductStatus();
+  const deleteProductMutation = useDeleteProduct();
 
-  const fetchStores = async () => {
-    try {
-      const response = await fetch('/api/business/stores');
-      if (response.ok) {
-        const data = await response.json();
-        setStores(data.stores);
-      }
-    } catch (error) {
-      console.error('Error fetching stores:', error);
-      toast.error('Error al cargar las tiendas');
-    }
+  // Reset to page 1 when filters change
+  const handleFilterChange = (newFilters: Partial<typeof productsFilters>) => {
+    setProductsFilters(newFilters);
+    setCurrentPage(1);
   };
 
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (selectedStore) params.append('storeId', selectedStore);
-      if (searchQuery) params.append('search', searchQuery);
-      if (showActiveOnly) params.append('isActive', 'true');
-      
-      // Add pagination params
-      params.append('limit', itemsPerPage.toString());
-      params.append('offset', ((currentPage - 1) * itemsPerPage).toString());
-      
-      const response = await fetch(`/api/business/products?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setProducts(data.products);
-        
-        // Calculate pagination info
-        const totalProducts = data.totalCount || data.products.length;
-        const totalPages = Math.ceil(totalProducts / itemsPerPage);
-        
-        setPagination({
-          currentPage,
-          totalPages,
-          totalProducts,
-          hasNext: currentPage < totalPages,
-          hasPrev: currentPage > 1
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      toast.error('Error al cargar los productos');
-    } finally {
-      setLoading(false);
-    }
+  const handleToggleProductStatus = (productId: string, currentStatus: boolean) => {
+    toggleProductStatusMutation.mutate({ productId, isActive: !currentStatus });
   };
 
-  const handleToggleStatus = async (productId: string, currentStatus: boolean) => {
-    try {
-      const response = await fetch(`/api/business/products/${productId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'toggle' })
-      });
 
-      if (response.ok) {
-        setProducts(products.map(product => 
-          product.id === productId 
-            ? { ...product, isActive: !currentStatus }
-            : product
-        ));
-        toast.success(`Producto ${!currentStatus ? 'activado' : 'desactivado'} exitosamente`);
-      } else {
-        toast.error('Error al cambiar el estado del producto');
-      }
-    } catch (error) {
-      toast.error('Error al cambiar el estado del producto');
-    }
-  };
-
-  const handleDeleteProduct = async (productId: string, productName: string) => {
+  const handleDeleteProduct = (productId: string, productName: string) => {
     if (!confirm(`¿Estás seguro de que quieres eliminar el producto "${productName}"?`)) {
       return;
     }
-
-    try {
-      const response = await fetch(`/api/business/products/${productId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        setProducts(products.filter(product => product.id !== productId));
-        toast.success('Producto eliminado exitosamente');
-      } else {
-        const error = await response.json();
-        toast.error(error.message || 'Error al eliminar el producto');
-      }
-    } catch (error) {
-      toast.error('Error al eliminar el producto');
-    }
+    
+    deleteProductMutation.mutate(productId);
   };
 
-  const getStockStatusColor = (stock: number) => {
-    if (stock === 0) return 'text-red-600';
-    if (stock <= 5) return 'text-yellow-600';
-    return 'text-green-600';
-  };
+  // Calculate pagination info
+  const pagination = useMemo(() => {
+    const totalProducts = data?.totalCount || 0;
+    const totalPages = Math.ceil(totalProducts / productsItemsPerPage);
+    
+    return {
+      currentPage,
+      totalPages,
+      totalProducts,
+      hasNext: currentPage < totalPages,
+      hasPrev: currentPage > 1,
+    };
+  }, [data?.totalCount, productsItemsPerPage, currentPage]);
 
-  const getStockStatusText = (stock: number) => {
-    if (stock === 0) return 'Sin stock';
-    if (stock <= 5) return 'Stock bajo';
-    return 'En stock';
-  };
-
-  if (loading && products.length === 0) {
+  // Loading state
+  if (isLoading && !data) {
     return (
       <div className="container mx-auto p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Gestión de Productos</h1>
-          <p className="text-gray-600">Administra todos tus productos por tienda</p>
+          <p className="text-gray-600">Administra todos los productos de tus tiendas</p>
         </div>
         
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -216,13 +126,41 @@ export default function ProductsManagementClient({ user }: ProductsManagementPro
     );
   }
 
+  // Error state
+  if (error) {
+    return (
+      <div className="container mx-auto p-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Gestión de Productos</h1>
+          <p className="text-gray-600">Administra todos los productos de tus tiendas</p>
+        </div>
+        
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="text-red-500 mb-4">
+              Error al cargar los productos
+            </div>
+            <p className="text-gray-600 mb-4">
+              {error.message || 'Ocurrió un error inesperado'}
+            </p>
+            <Button onClick={() => window.location.reload()}>
+              Reintentar
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const products = data?.products || [];
+
   return (
     <div className="container mx-auto p-8">
       <div className="mb-8">
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold mb-2">Gestión de Productos</h1>
-            <p className="text-gray-600">Administra todos tus productos por tienda</p>
+            <p className="text-gray-600">Administra todos los productos de tus tiendas</p>
           </div>
           <Link href="/dashboard/products/new">
             <Button>
@@ -235,16 +173,16 @@ export default function ProductsManagementClient({ user }: ProductsManagementPro
 
       <ProductFilters
         stores={stores}
-        selectedStore={selectedStore}
-        setSelectedStore={setSelectedStore}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        showActiveOnly={showActiveOnly}
-        setShowActiveOnly={setShowActiveOnly}
-        itemsPerPage={itemsPerPage}
-        setItemsPerPage={setItemsPerPage}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
+        selectedStore={productsFilters.storeFilter}
+        setSelectedStore={(store) => handleFilterChange({ storeFilter: store })}
+        searchQuery={productsFilters.searchQuery}
+        setSearchQuery={(query) => handleFilterChange({ searchQuery: query })}
+        showActiveOnly={productsFilters.showActiveOnly}
+        setShowActiveOnly={(active) => handleFilterChange({ showActiveOnly: active })}
+        itemsPerPage={productsItemsPerPage}
+        setItemsPerPage={setProductsItemsPerPage}
+        viewMode={productsViewMode}
+        setViewMode={setProductsViewMode}
         totalProducts={pagination.totalProducts}
       />
 
@@ -254,15 +192,18 @@ export default function ProductsManagementClient({ user }: ProductsManagementPro
           <CardContent className="py-12 text-center">
             <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-semibold mb-2">
-              {selectedStore || searchQuery ? 'No se encontraron productos' : 'No tienes productos'}
+              {productsFilters.searchQuery || productsFilters.storeFilter || productsFilters.categoryFilter
+                ? 'No se encontraron productos' 
+                : 'No tienes productos'
+              }
             </h3>
             <p className="text-gray-600 mb-4">
-              {selectedStore || searchQuery 
+              {productsFilters.searchQuery || productsFilters.storeFilter || productsFilters.categoryFilter
                 ? 'Ajusta los filtros para ver más productos'
                 : 'Crea tu primer producto para empezar a vender'
               }
             </p>
-            {!selectedStore && !searchQuery && (
+            {!productsFilters.searchQuery && !productsFilters.storeFilter && !productsFilters.categoryFilter && (
               <Link href="/dashboard/products/new">
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
@@ -275,22 +216,38 @@ export default function ProductsManagementClient({ user }: ProductsManagementPro
       ) : (
         <>
           <div className="space-y-6">
-            {viewMode === 'grid' ? (
+            {productsViewMode === 'grid' ? (
               <ProductsGrid
                 products={products}
                 stores={stores}
-                selectedStore={selectedStore}
-                onToggleStatus={handleToggleStatus}
+                selectedStore={productsFilters.storeFilter}
+                onToggleStatus={handleToggleProductStatus}
                 onDelete={handleDeleteProduct}
               />
             ) : (
               <ProductTable
                 products={products}
-                onToggleStatus={handleToggleStatus}
+                onToggleStatus={handleToggleProductStatus}
                 onDelete={handleDeleteProduct}
               />
             )}
           </div>
+
+          {/* Loading indicators */}
+          {(toggleProductStatusMutation.isPending || 
+            deleteProductMutation.isPending) && (
+            <div className="fixed bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg">
+              {deleteProductMutation.isPending && 'Eliminando producto...'}
+              {toggleProductStatusMutation.isPending && 'Cambiando estado...'}
+            </div>
+          )}
+
+          {/* Loading indicator durante refetch */}
+          {isLoading && data && (
+            <div className="fixed bottom-4 right-4 bg-gray-500 text-white px-4 py-2 rounded-md shadow-lg">
+              Actualizando...
+            </div>
+          )}
 
           {/* Paginación */}
           {pagination.totalPages > 1 && (
@@ -302,7 +259,7 @@ export default function ProductsManagementClient({ user }: ProductsManagementPro
                 hasNextPage={pagination.hasNext}
                 hasPreviousPage={pagination.hasPrev}
                 totalItems={pagination.totalProducts}
-                itemsPerPage={itemsPerPage}
+                itemsPerPage={productsItemsPerPage}
               />
             </div>
           )}
@@ -311,4 +268,3 @@ export default function ProductsManagementClient({ user }: ProductsManagementPro
     </div>
   );
 }
-

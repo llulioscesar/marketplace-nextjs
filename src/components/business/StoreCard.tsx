@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Eye, Package } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface StoreData {
   id: string;
@@ -31,9 +32,11 @@ export default function StoreCard({ store, onToggleStatus, onDelete }: StoreCard
     <Card>
       {store.imageUrl && (
         <div className="h-48 bg-gray-200 rounded-t-lg overflow-hidden">
-          <img
+          <Image
             src={store.imageUrl}
             alt={store.name}
+            width={400}
+            height={192}
             className="w-full h-full object-cover"
           />
         </div>

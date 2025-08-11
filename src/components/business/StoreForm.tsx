@@ -48,7 +48,7 @@ export default function StoreForm({ mode, storeId }: StoreFormProps) {
           isActive: store.isActive
         });
       }
-    } catch (error) {
+    } catch {
       toast.error('Error al cargar los datos de la tienda');
     }
   }, [storeId, form]);

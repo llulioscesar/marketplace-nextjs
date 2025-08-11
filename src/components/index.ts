@@ -7,20 +7,14 @@ export * from './layouts';
 // Auth Components
 export * from './auth';
 
-// Product Components
-export * from './products';
-
 // Store Components
 export * from './stores';
 
-// Cart Components
-export * from './cart';
-
-// Checkout Components
-export * from './checkout';
-
 // Business Components
 export * from './business';
+
+// Customer Components
+export * from './customer';
 
 // Common Components
 export * from './common';

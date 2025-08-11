@@ -1,10 +1,10 @@
 'use client';
 
 import { useCart } from '@/hooks';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/auth/useAuth';
 import { redirect } from 'next/navigation';
-import { CartSummary } from '@/components/cart';
-import { CheckoutForm } from '@/components/checkout';
+import { CartSummary } from '@/components/customer/cart';
+import { CheckoutForm } from '@/components/customer/checkout';
 
 export default function CheckoutPage() {
   const { isAuthenticated, isCustomer } = useAuth();

@@ -51,7 +51,7 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
         const data = await response.json();
         setStores(data.stores);
       }
-    } catch (error) {
+    } catch {
       toast.error('Error al cargar las tiendas');
     }
   };
@@ -73,7 +73,7 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
           isActive: product.isActive
         });
       }
-    } catch (error) {
+    } catch {
       toast.error('Error al cargar los datos del producto');
     }
   }, [productId, form]);

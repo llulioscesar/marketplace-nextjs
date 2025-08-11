@@ -6,7 +6,7 @@ import { StoreGrid } from '@/components/stores';
 import { StoreLoadingSkeleton } from '@/components/common/LoadingSkeletons';
 import { useStores } from '@/hooks';
 
-export default function StoresPageClient() {
+export default function StoresListClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentPage = parseInt(searchParams.get('page') || '1');

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Product } from '@prisma/client';
 import { ShoppingCart } from 'lucide-react';
 import { formatPriceCOP } from '@/lib/utils/currency.utils';
+import Image from 'next/image';
 import { useCart } from '@/hooks';
 
 interface ProductCardProps {
@@ -28,9 +29,11 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
     <Card className="h-full flex flex-col">
       {product.imageUrl && (
         <div className="h-48 bg-gray-200 rounded-t-lg overflow-hidden">
-          <img
+          <Image
             src={product.imageUrl}
             alt={product.name}
+            width={400}
+            height={192}
             className="w-full h-full object-cover"
           />
         </div>
