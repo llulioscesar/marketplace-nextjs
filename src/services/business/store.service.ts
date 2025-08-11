@@ -22,6 +22,13 @@ export interface BusinessStoreWithStats extends Store {
   };
 }
 
+export interface BusinessStoreFilters {
+  search?: string;
+  isActive?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
 export interface BusinessStoreStats {
   totalStores: number;
   activeStores: number;
@@ -52,6 +59,67 @@ export class BusinessStoreService {
     });
 
     return stores as BusinessStoreWithStats[];
+  }
+
+  /**
+   * Obtiene las tiendas de un business con filtros y paginación
+   */
+  static async getBusinessStoresWithFilters(businessId: string, filters: BusinessStoreFilters = {}): Promise<BusinessStoreWithStats[]> {
+    const { search, isActive, limit = 20, offset = 0 } = filters;
+
+    const where: any = { businessId };
+
+    if (isActive !== undefined) {
+      where.isActive = isActive;
+    }
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    const stores = await prisma.store.findMany({
+      where,
+      include: {
+        _count: {
+          select: {
+            products: {
+              where: { isActive: true }
+            },
+            orders: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset,
+    });
+
+    return stores as BusinessStoreWithStats[];
+  }
+
+  /**
+   * Obtiene el conteo total de tiendas con filtros
+   */
+  static async getBusinessStoresCount(businessId: string, filters: Omit<BusinessStoreFilters, 'limit' | 'offset'> = {}): Promise<number> {
+    const { search, isActive } = filters;
+
+    const where: any = { businessId };
+
+    if (isActive !== undefined) {
+      where.isActive = isActive;
+    }
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    return await prisma.store.count({ where });
   }
 
   /**

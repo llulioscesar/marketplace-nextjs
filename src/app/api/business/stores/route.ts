@@ -19,9 +19,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const stores = await BusinessServices.BusinessStoreService.getBusinessStores(session.user.id);
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search') || undefined;
+    const isActive = searchParams.get('isActive') ? searchParams.get('isActive') === 'true' : undefined;
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const offset = parseInt(searchParams.get('offset') || '0');
 
-    return NextResponse.json({ stores });
+    const [stores, totalCount] = await Promise.all([
+      BusinessServices.BusinessStoreService.getBusinessStoresWithFilters(
+        session.user.id,
+        { search, isActive, limit, offset }
+      ),
+      BusinessServices.BusinessStoreService.getBusinessStoresCount(
+        session.user.id,
+        { search, isActive }
+      )
+    ]);
+
+    return NextResponse.json({ stores, totalCount });
 
   } catch (error) {
     console.error('Error fetching stores:', error);

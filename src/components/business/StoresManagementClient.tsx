@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useState, useCallback } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Store, Package, Edit, Trash2, Plus, Eye } from 'lucide-react';
+import { Store, Plus } from 'lucide-react';
+import { Pagination } from '@/components/common';
+import StoreFilters from './StoreFilters';
+import StoresGrid from './StoresGrid';
+import StoreTable from './StoreTable';
 import Link from 'next/link';
-import { formatPriceCOP } from '@/lib/utils/currency.utils';
 import { toast } from 'sonner';
 
 interface User {
@@ -34,21 +36,67 @@ interface StoresManagementProps {
   user: User;
 }
 
+interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalStores: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 export default function StoresManagementClient({ user }: StoresManagementProps) {
   const [stores, setStores] = useState<StoreData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [showActiveOnly, setShowActiveOnly] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    currentPage: 1,
+    totalPages: 1,
+    totalStores: 0,
+    hasNext: false,
+    hasPrev: false
+  });
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
+  // Debounce search query
   useEffect(() => {
-    fetchStores();
-  }, []);
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
 
-  const fetchStores = async () => {
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const fetchStores = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/business/stores');
+      const params = new URLSearchParams();
+      if (debouncedSearchQuery) params.append('search', debouncedSearchQuery);
+      if (showActiveOnly) params.append('isActive', 'true');
+      
+      // Add pagination params
+      params.append('limit', itemsPerPage.toString());
+      params.append('offset', ((currentPage - 1) * itemsPerPage).toString());
+      
+      const response = await fetch(`/api/business/stores?${params}`);
       if (response.ok) {
         const data = await response.json();
         setStores(data.stores);
+        
+        // Calculate pagination info
+        const totalStores = data.totalCount || data.stores.length;
+        const totalPages = Math.ceil(totalStores / itemsPerPage);
+        
+        setPagination({
+          currentPage,
+          totalPages,
+          totalStores,
+          hasNext: currentPage < totalPages,
+          hasPrev: currentPage > 1
+        });
       }
     } catch (error) {
       console.error('Error fetching stores:', error);
@@ -56,7 +104,17 @@ export default function StoresManagementClient({ user }: StoresManagementProps) 
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedSearchQuery, showActiveOnly, itemsPerPage, currentPage]);
+
+  // Effect for filter changes - reset to page 1 and fetch
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery, showActiveOnly, itemsPerPage]);
+
+  // Effect for data fetching - runs when dependencies change
+  useEffect(() => {
+    fetchStores();
+  }, [fetchStores]);
 
   const handleDeleteStore = async (storeId: string, storeName: string) => {
     if (!confirm(`¿Estás seguro de que quieres eliminar la tienda "${storeName}"?`)) {
@@ -112,7 +170,7 @@ export default function StoresManagementClient({ user }: StoresManagementProps) 
         </div>
         
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
+          {[...Array(6)].map((_, i) => (
             <Card key={i}>
               <CardContent className="p-6">
                 <div className="animate-pulse space-y-4">
@@ -145,88 +203,75 @@ export default function StoresManagementClient({ user }: StoresManagementProps) 
         </div>
       </div>
 
+      <StoreFilters
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        showActiveOnly={showActiveOnly}
+        setShowActiveOnly={setShowActiveOnly}
+        itemsPerPage={itemsPerPage}
+        setItemsPerPage={setItemsPerPage}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        totalStores={pagination.totalStores}
+      />
+
+      {/* Lista de tiendas */}
       {stores.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Store className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No tienes tiendas</h3>
-            <p className="text-gray-600 mb-4">Crea tu primera tienda para empezar a vender</p>
-            <Link href="/dashboard/stores/new">
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Crear Primera Tienda
-              </Button>
-            </Link>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery ? 'No se encontraron tiendas' : 'No tienes tiendas'}
+            </h3>
+            <p className="text-gray-600 mb-4">
+              {searchQuery 
+                ? 'Ajusta los filtros para ver más tiendas'
+                : 'Crea tu primera tienda para empezar a vender'
+              }
+            </p>
+            {!searchQuery && (
+              <Link href="/dashboard/stores/new">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear Primera Tienda
+                </Button>
+              </Link>
+            )}
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {stores.map((store) => (
-            <Card key={store.id}>
-              {store.imageUrl && (
-                <div className="h-48 bg-gray-200 rounded-t-lg overflow-hidden">
-                  <img
-                    src={store.imageUrl}
-                    alt={store.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="line-clamp-1">{store.name}</CardTitle>
-                  <Badge variant={store.isActive ? "default" : "secondary"}>
-                    {store.isActive ? 'Activa' : 'Inactiva'}
-                  </Badge>
-                </div>
-                <CardDescription className="line-clamp-2">
-                  {store.description || 'Sin descripción'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span className="flex items-center gap-1">
-                      <Package className="h-4 w-4" />
-                      {store._count.products} productos
-                    </span>
-                    <span>{store._count.orders} órdenes</span>
-                  </div>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Link href={`/stores/${store.slug}`} className="flex-1">
-                    <Button variant="outline" size="sm" className="w-full">
-                      <Eye className="h-4 w-4 mr-1" />
-                      Ver
-                    </Button>
-                  </Link>
-                  <Link href={`/dashboard/stores/${store.id}/edit`} className="flex-1">
-                    <Button variant="outline" size="sm" className="w-full">
-                      <Edit className="h-4 w-4 mr-1" />
-                      Editar
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => toggleStoreStatus(store.id, store.isActive)}
-                  >
-                    {store.isActive ? 'Desactivar' : 'Activar'}
-                  </Button>
-                  <Button
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleDeleteStore(store.id, store.name)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <>
+          <div className="space-y-6">
+            {viewMode === 'grid' ? (
+              <StoresGrid
+                stores={stores}
+                onToggleStatus={toggleStoreStatus}
+                onDelete={handleDeleteStore}
+              />
+            ) : (
+              <StoreTable
+                stores={stores}
+                onToggleStatus={toggleStoreStatus}
+                onDelete={handleDeleteStore}
+              />
+            )}
+          </div>
+
+          {/* Paginación */}
+          {pagination.totalPages > 1 && (
+            <div className="mt-8 flex justify-center">
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={setCurrentPage}
+                hasNextPage={pagination.hasNext}
+                hasPreviousPage={pagination.hasPrev}
+                totalItems={pagination.totalStores}
+                itemsPerPage={itemsPerPage}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
