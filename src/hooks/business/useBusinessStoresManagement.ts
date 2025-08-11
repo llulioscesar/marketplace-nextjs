@@ -148,6 +148,65 @@ export const useToggleStoreStatus = () => {
   });
 };
 
+export const useCreateStore = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (storeData: any) => {
+      const response = await fetch('/api/business/stores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(storeData),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Error al crear la tienda');
+      }
+      return response.json();
+    },
+    onSuccess: (newStore) => {
+      toast.success('Tienda creada exitosamente');
+      
+      // Invalidate all store-related queries to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ['business', 'stores'] });
+      queryClient.invalidateQueries({ queryKey: ['stores'] }); // For public stores
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Error al crear la tienda');
+    },
+  });
+};
+
+export const useUpdateStore = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await fetch(`/api/business/stores/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Error al actualizar la tienda');
+      }
+      return response.json();
+    },
+    onSuccess: (updatedStore) => {
+      toast.success('Tienda actualizada exitosamente');
+      
+      // Invalidate all store-related queries to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ['business', 'stores'] });
+      queryClient.invalidateQueries({ queryKey: ['stores'] }); // For public stores
+      queryClient.invalidateQueries({ queryKey: ['store', updatedStore.slug] }); // Specific store
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Error al actualizar la tienda');
+    },
+  });
+};
+
 export const useDeleteStore = () => {
   const queryClient = useQueryClient();
   
@@ -172,6 +231,7 @@ export const useDeleteStore = () => {
       
       // Invalidate all store-related queries
       queryClient.invalidateQueries({ queryKey: ['business', 'stores'] });
+      queryClient.invalidateQueries({ queryKey: ['stores'] }); // For public stores
     },
     onError: (error) => {
       toast.error(error.message || 'Error al eliminar la tienda');

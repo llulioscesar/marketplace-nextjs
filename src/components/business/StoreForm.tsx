@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { storeSchema, StoreFormData } from '@/lib/validations/store';
+import { useCreateStore, useUpdateStore } from '@/hooks/business/useBusinessStoresManagement';
 import Link from 'next/link';
 
 
@@ -22,6 +23,8 @@ interface StoreFormProps {
 
 export default function StoreForm({ mode, storeId }: StoreFormProps) {
   const router = useRouter();
+  const createStoreMutation = useCreateStore();
+  const updateStoreMutation = useUpdateStore();
 
   const form = useForm({
     resolver: zodResolver(storeSchema),
@@ -61,42 +64,15 @@ export default function StoreForm({ mode, storeId }: StoreFormProps) {
 
   const onSubmit: SubmitHandler<StoreFormData> = async (validatedData) => {
     try {
-      const url = mode === 'create' 
-        ? '/api/business/stores'
-        : `/api/business/stores/${storeId}`;
-      
-      const method = mode === 'create' ? 'POST' : 'PUT';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(validatedData)
-      });
-
-      if (response.ok) {
-        toast.success(
-          mode === 'create' 
-            ? 'Tienda creada exitosamente' 
-            : 'Tienda actualizada exitosamente',
-          {
-            position: 'top-center',
-            richColors: true,
-          }
-        );
-        router.push('/dashboard/stores');
-      } else {
-        const error = await response.json();
-        toast.error(error.message || 'Error al procesar la solicitud', {
-          position: 'top-center',
-          richColors: true,
-        });
+      if (mode === 'create') {
+        await createStoreMutation.mutateAsync(validatedData);
+      } else if (storeId) {
+        await updateStoreMutation.mutateAsync({ id: storeId, data: validatedData });
       }
+      router.push('/dashboard/stores');
     } catch (error) {
+      // Error handling is now done in the mutation hooks
       console.error('Error processing form:', error);
-      toast.error('Error inesperado. Por favor, intenta nuevamente.', {
-        position: 'top-center',
-        richColors: true,
-      });
     }
   };
 
@@ -210,10 +186,10 @@ export default function StoreForm({ mode, storeId }: StoreFormProps) {
                 <div className="flex gap-4 pt-4">
                   <Button 
                     type="submit" 
-                    disabled={form.formState.isSubmitting}
+                    disabled={createStoreMutation.isPending || updateStoreMutation.isPending}
                     className="flex-1"
                   >
-                    {form.formState.isSubmitting ? (
+                    {(createStoreMutation.isPending || updateStoreMutation.isPending) ? (
                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Procesando...</>
                     ) : (
                       mode === 'create' ? 'Crear Tienda' : 'Actualizar Tienda'
