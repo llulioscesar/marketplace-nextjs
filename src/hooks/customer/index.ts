@@ -5,3 +5,6 @@ export * from './useCartSession';
 // Public store/product hooks  
 export * from './useProducts';
 export * from './useStores';
+
+// Order hooks
+export * from './useOrders';

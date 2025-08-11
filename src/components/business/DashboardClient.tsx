@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Store, ShoppingBag, Package, TrendingUp, Plus } from 'lucide-react';
+import { Store, ShoppingBag, Package, TrendingUp, Plus, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useDashboardStats } from '@/hooks/business/useDashboard';
 
 interface User {
   id: string;
@@ -14,52 +14,28 @@ interface User {
   role: string;
 }
 
-interface DashboardStats {
-  totalStores: number;
-  totalProducts: number;
-  totalOrders: number;
-  totalRevenue: number;
-  recentOrders: Array<{
-    id: string;
-    orderNumber: string;
-    totalAmount: number;
-    status: string;
-    createdAt: string;
-    customer: {
-      name: string;
-    };
-    store: {
-      name: string;
-    };
-  }>;
-}
 
 interface DashboardProps {
   user: User;
 }
 
 export default function DashboardClient({ user }: DashboardProps) {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: stats, isLoading: loading, error } = useDashboardStats();
 
-  useEffect(() => {
-    fetchDashboardStats();
-  }, []);
-
-  const fetchDashboardStats = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/business/dashboard');
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (error) {
+    return (
+      <div className="container mx-auto p-8">
+        <div className="flex items-center justify-center min-h-96">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">Error al cargar las estadísticas del dashboard</p>
+            <Button onClick={() => window.location.reload()}>
+              Reintentar
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

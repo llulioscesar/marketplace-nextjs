@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/config';
+import { getAuthSession } from '@/lib/auth/server';
 import { BusinessServices } from '@/services';
 import { z } from 'zod';
 
@@ -16,7 +15,7 @@ const createProductSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     
     if (!session || session.user.role !== 'BUSINESS') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
@@ -55,7 +54,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     
     if (!session || session.user.role !== 'BUSINESS') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });

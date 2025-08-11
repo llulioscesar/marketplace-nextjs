@@ -13,7 +13,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { productSchema, ProductFormData } from '@/lib/validations/product';
 import { useBusinessStores } from '@/hooks/business/useBusinessStores';
-import { useCreateProduct, useUpdateProduct } from '@/hooks/business/useBusinessProductsManagement';
+import { useCreateProduct, useUpdateProduct, useBusinessProduct } from '@/hooks/business/useBusinessProductsManagement';
 import Link from 'next/link';
 
 interface Store {
@@ -31,6 +31,7 @@ interface ProductFormProps {
 export default function ProductForm({ mode, productId }: ProductFormProps) {
   const router = useRouter();
   const { data: stores = [] } = useBusinessStores();
+  const { data: product, isLoading: isProductLoading } = useBusinessProduct(mode === 'edit' ? productId : undefined);
   const createProductMutation = useCreateProduct();
   const updateProductMutation = useUpdateProduct();
 
@@ -49,34 +50,19 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
   });
 
 
-  const fetchProduct = useCallback(async () => {
-    if (!productId) return;
-    
-    try {
-      const response = await fetch(`/api/business/products/${productId}`);
-      if (response.ok) {
-        const product = await response.json();
-        form.reset({
-          name: product.name,
-          description: product.description || '',
-          price: Number(product.price),
-          stock: product.stock,
-          imageUrl: product.imageUrl || '',
-          storeId: product.store.id,
-          isActive: product.isActive
-        });
-      }
-    } catch {
-      toast.error('Error al cargar los datos del producto');
-    }
-  }, [productId, form]);
-
-
   useEffect(() => {
-    if (mode === 'edit' && productId) {
-      fetchProduct();
+    if (mode === 'edit' && product) {
+      form.reset({
+        name: product.name,
+        description: product.description || '',
+        price: Number(product.price),
+        stock: product.stock,
+        imageUrl: product.imageUrl || '',
+        storeId: product.store.id,
+        isActive: product.isActive
+      });
     }
-  }, [mode, productId, fetchProduct]);
+  }, [mode, product, form]);
 
   const onSubmit: SubmitHandler<ProductFormData> = async (validatedData) => {
     try {
@@ -92,6 +78,17 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
     }
   };
 
+
+  if (mode === 'edit' && isProductLoading) {
+    return (
+      <div className="container mx-auto p-8">
+        <div className="flex items-center justify-center min-h-96">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Cargando producto...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-8">

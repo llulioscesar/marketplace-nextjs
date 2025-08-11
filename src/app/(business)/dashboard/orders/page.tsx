@@ -1,10 +1,9 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/config';
 import { redirect } from 'next/navigation';
+import { getAuthSession } from '@/lib/auth/server';
 import OrdersManagementClient from '@/components/business/OrdersManagementClient';
 
 export default async function OrdersPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   if (!session) {
     redirect('/auth/signin');

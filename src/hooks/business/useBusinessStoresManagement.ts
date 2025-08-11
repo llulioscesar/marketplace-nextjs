@@ -45,6 +45,15 @@ const fetchBusinessStores = async (filters: StoresFilters): Promise<StoresRespon
   return response.json();
 };
 
+const fetchBusinessStore = async (storeId: string): Promise<BusinessStoreData> => {
+  const response = await fetch(`/api/business/stores/${storeId}`);
+  if (!response.ok) {
+    throw new Error('Error al cargar la tienda');
+  }
+  
+  return response.json();
+};
+
 const toggleStoreStatus = async ({ storeId, isActive }: { storeId: string; isActive: boolean }) => {
   const response = await fetch(`/api/business/stores/${storeId}`, {
     method: 'PATCH',
@@ -81,6 +90,23 @@ export const useBusinessStoresManagement = (filters: StoresFilters) => {
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false,
     enabled: true,
+  });
+};
+
+export const useBusinessStore = (storeId: string | undefined) => {
+  return useQuery({
+    queryKey: ['business', 'store', storeId],
+    queryFn: () => {
+      console.log('🔍 Fetching store data for:', storeId);
+      return fetchBusinessStore(storeId!);
+    },
+    enabled: !!storeId,
+    staleTime: 30 * 1000, // 30 seconds - shorter for edit forms
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: true, // Refetch when returning to edit form
+    onSuccess: (data) => {
+      console.log('📦 Store data loaded:', storeId, data);
+    }
   });
 };
 
@@ -193,13 +219,21 @@ export const useUpdateStore = () => {
       }
       return response.json();
     },
-    onSuccess: (updatedStore) => {
+    onSuccess: (updatedStore, { id }) => {
       toast.success('Tienda actualizada exitosamente');
       
-      // Invalidate all store-related queries to ensure fresh data
+      console.log('🔄 Store updated, invalidating cache for:', id);
+      
+      // Force complete refresh of store data
+      queryClient.removeQueries({ queryKey: ['business', 'store', id] });
       queryClient.invalidateQueries({ queryKey: ['business', 'stores'] });
       queryClient.invalidateQueries({ queryKey: ['stores'] }); // For public stores
-      queryClient.invalidateQueries({ queryKey: ['store', updatedStore.slug] }); // Specific store
+      queryClient.invalidateQueries({ queryKey: ['store', updatedStore.slug] }); // Public store by slug
+      
+      // Set fresh data
+      queryClient.setQueryData(['business', 'store', id], updatedStore);
+      
+      console.log('✅ Cache invalidation completed for store:', id);
     },
     onError: (error) => {
       toast.error(error.message || 'Error al actualizar la tienda');

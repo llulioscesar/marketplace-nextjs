@@ -1,59 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatPriceCOP } from '@/lib/utils/currency.utils';
-import { Calendar, Package, Store, User } from 'lucide-react';
+import { Calendar, Package, Store, User, Loader2 } from 'lucide-react';
+import { useCustomerOrders, type CustomerOrder } from '@/hooks/customer/useOrders';
 
-interface OrderItem {
-  id: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  product: {
-    id: string;
-    name: string;
-    imageUrl?: string;
-  };
-}
-
-interface Order {
-  id: string;
-  orderNumber: string;
-  totalAmount: number;
-  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
-  createdAt: string;
-  customer: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  store: {
-    id: string;
-    name: string;
-    slug: string;
-    business: {
-      id: string;
-      name: string;
-      email: string;
-    };
-  };
-  items: OrderItem[];
-}
-
-interface OrdersResponse {
-  orders: Order[];
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    totalOrders: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-}
 
 const statusLabels = {
   PENDING: 'Pendiente',
@@ -71,36 +25,31 @@ const statusColors = {
 
 export default function OrdersPage() {
   const { isAuthenticated, user } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+  const { data: ordersData, isLoading: loading, error } = useCustomerOrders();
 
   if (!isAuthenticated) {
     redirect('/login');
   }
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  const orders = ordersData?.orders || [];
 
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/orders');
-      
-      if (!response.ok) {
-        throw new Error('Error al cargar las órdenes');
-      }
-
-      const data: OrdersResponse = await response.json();
-      setOrders(data.orders);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (error) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex items-center justify-center min-h-96">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">Error al cargar las órdenes</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

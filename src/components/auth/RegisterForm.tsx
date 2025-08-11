@@ -11,10 +11,12 @@ import {RadioGroup, RadioGroupItem} from "@/components/ui/radio-group";
 import {RegisterInput, registerSchema} from "@/lib/validations/auth";
 import {toast} from "sonner";
 import {useRouter} from "next/navigation";
+import {useRegister} from "@/hooks/auth/useAuth";
 
 export default function RegisterForm() {
     const [showPass, setShowPass] = useState(false);
-    const router = useRouter()
+    const router = useRouter();
+    const registerMutation = useRegister();
 
     const form = useForm<RegisterInput>({
         resolver: zodResolver(registerSchema),
@@ -28,44 +30,29 @@ export default function RegisterForm() {
     });
 
     const onSubmit = async (validatedData: RegisterInput) => {
-        try {
-            const response = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(validatedData),
-            })
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                if (data.code === 'EMAIL_ALREADY_EXISTS') {
+        registerMutation.mutate(validatedData, {
+            onSuccess: () => {
+                toast.success('Registro exitoso', {
+                    position: 'top-center',
+                    richColors: true,
+                });
+                router.push('/login');
+            },
+            onError: (error: Error) => {
+                console.error(error);
+                if (error.message.includes('email ya esta registrado')) {
                     toast.error('Este email ya esta registrado', {
                         position: 'top-center',
                         richColors: true,
                     });
-                } else if (data.details) {
-
                 } else {
-                    toast.error(data.error || 'Error al registrar', {
+                    toast.error(error.message || 'Error al registrar', {
                         position: 'top-center',
                         richColors: true,
                     });
                 }
-                return;
             }
-
-            toast.success('Registro exitoso', {
-                position: 'top-center',
-                richColors: true,
-            })
-            router.push('/login');
-        } catch (error) {
-            console.error(error);
-            toast.error('Error inesperado. Por favor, intenta nuevamente.', {
-                position: 'top-center',
-                richColors: true,
-            });
-        }
+        });
     }
 
     return (
@@ -172,10 +159,10 @@ export default function RegisterForm() {
 
                     <Button
                         type="submit"
-                        disabled={form.formState.isSubmitting}
+                        disabled={registerMutation.isPending}
                         className="w-full"
                     >
-                        {form.formState.isSubmitting ? (
+                        {registerMutation.isPending ? (
                             <Loader2Icon className="animate-spin">Creando cuenta...</Loader2Icon>) : "Crear cuenta"}
                     </Button>
                 </form>

@@ -1,6 +1,5 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/config';
 import { redirect } from 'next/navigation';
+import { getAuthSession } from '@/lib/auth/server';
 import { OrderDetailWrapper } from '@/components/business/OrderDetailWrapper';
 
 interface OrderDetailPageProps {
@@ -10,7 +9,7 @@ interface OrderDetailPageProps {
 }
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   if (!session) {
     redirect('/auth/signin');

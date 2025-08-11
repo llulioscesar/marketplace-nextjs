@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/config';
+import { getAuthSession } from '@/lib/auth/server';
 import { CustomerServices } from '@/services';
 
 // GET - Get specific customer order
@@ -9,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     
     if (!session || session.user.role !== 'CUSTOMER') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
@@ -42,7 +41,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     
     if (!session || session.user.role !== 'CUSTOMER') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });

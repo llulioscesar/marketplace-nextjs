@@ -65,15 +65,27 @@ const fetchBusinessProducts = async (filters: ProductsFilters): Promise<Products
   return response.json();
 };
 
+const fetchBusinessProduct = async (productId: string): Promise<BusinessProductData> => {
+  const response = await fetch(`/api/business/products/${productId}`);
+  if (!response.ok) {
+    throw new Error('Error al cargar el producto');
+  }
+  
+  return response.json();
+};
+
 const updateProduct = async ({ productId, data }: { productId: string; data: UpdateProductData }) => {
+  console.log('🔄 Updating product:', productId, 'with data:', data);
+  
   const response = await fetch(`/api/business/products/${productId}`, {
-    method: 'PATCH',
+    method: 'PUT', // Changed from PATCH to PUT for complete updates
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
   
   if (!response.ok) {
-    throw new Error('Error al actualizar el producto');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Error ${response.status} al actualizar el producto`);
   }
   
   return response.json();
@@ -106,11 +118,31 @@ const deleteProduct = async (productId: string) => {
 };
 
 const toggleProductStatus = async ({ productId, isActive }: { productId: string; isActive: boolean }) => {
-  return updateProduct({ productId, data: { isActive } });
+  const response = await fetch(`/api/business/products/${productId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'toggle' }) // Use proper PATCH format
+  });
+  
+  if (!response.ok) {
+    throw new Error('Error al cambiar el estado del producto');
+  }
+  
+  return response.json();
 };
 
 const updateProductStock = async ({ productId, stock }: { productId: string; stock: number }) => {
-  return updateProduct({ productId, data: { stock } });
+  const response = await fetch(`/api/business/products/${productId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'set', quantity: stock }) // Use proper PATCH format for stock updates
+  });
+  
+  if (!response.ok) {
+    throw new Error('Error al actualizar el stock del producto');
+  }
+  
+  return response.json();
 };
 
 // Hooks
@@ -122,6 +154,17 @@ export const useBusinessProductsManagement = (filters: ProductsFilters) => {
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     enabled: true,
+  });
+};
+
+export const useBusinessProduct = (productId: string | undefined) => {
+  return useQuery({
+    queryKey: ['business', 'product', productId],
+    queryFn: () => fetchBusinessProduct(productId!),
+    enabled: !!productId,
+    staleTime: 30 * 1000, // 30 seconds - shorter for edit forms
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: true, // Refetch when returning to edit form
   });
 };
 
@@ -184,16 +227,20 @@ export const useUpdateProduct = () => {
       
       toast.error('Error al actualizar el producto');
     },
-    onSuccess: (updatedProduct) => {
+    onSuccess: (updatedProduct, { productId }) => {
       toast.success('Producto actualizado exitosamente');
       
-      // Invalidate to ensure fresh data
+      // Force complete refresh of product data
+      queryClient.removeQueries({ queryKey: ['business', 'product', productId] });
       queryClient.invalidateQueries({ 
         queryKey: ['business', 'products', 'management'],
         refetchType: 'none'
       });
       queryClient.invalidateQueries({ queryKey: ['products'] }); // For public products
-      queryClient.invalidateQueries({ queryKey: ['product', updatedProduct.id] }); // Specific product
+      queryClient.invalidateQueries({ queryKey: ['product', updatedProduct.id] }); // Public product
+      
+      // Set fresh data
+      queryClient.setQueryData(['business', 'product', productId], updatedProduct);
     },
     onSettled: () => {
       // Always refetch after 2 seconds to ensure consistency

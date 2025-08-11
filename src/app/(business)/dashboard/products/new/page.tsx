@@ -1,6 +1,5 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/config';
 import { redirect } from 'next/navigation';
+import { getAuthSession } from '@/lib/auth/server';
 import type { Metadata } from 'next';
 import { ProductForm } from '@/components/business';
 
@@ -10,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function NewProductPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   if (!session || session.user.role !== 'BUSINESS') {
     redirect('/unauthorized');

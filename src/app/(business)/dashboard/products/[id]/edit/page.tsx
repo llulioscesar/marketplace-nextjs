@@ -1,6 +1,5 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/config';
 import { redirect } from 'next/navigation';
+import { getAuthSession } from '@/lib/auth/server';
 import type { Metadata } from 'next';
 import { ProductForm } from '@/components/business';
 
@@ -14,7 +13,7 @@ interface PageProps {
 }
 
 export default async function EditProductPage({ params }: PageProps) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   const { id } = await params;
 
   if (!session || session.user.role !== 'BUSINESS') {

@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { storeSchema, StoreFormData } from '@/lib/validations/store';
-import { useCreateStore, useUpdateStore } from '@/hooks/business/useBusinessStoresManagement';
+import { useCreateStore, useUpdateStore, useBusinessStore } from '@/hooks/business/useBusinessStoresManagement';
 import Link from 'next/link';
 
 
@@ -23,6 +23,7 @@ interface StoreFormProps {
 
 export default function StoreForm({ mode, storeId }: StoreFormProps) {
   const router = useRouter();
+  const { data: store, isLoading: isStoreLoading } = useBusinessStore(mode === 'edit' ? storeId : undefined);
   const createStoreMutation = useCreateStore();
   const updateStoreMutation = useUpdateStore();
 
@@ -37,30 +38,16 @@ export default function StoreForm({ mode, storeId }: StoreFormProps) {
     }
   });
 
-  const fetchStore = useCallback(async () => {
-    if (!storeId) return;
-    
-    try {
-      const response = await fetch(`/api/business/stores/${storeId}`);
-      if (response.ok) {
-        const store = await response.json();
-        form.reset({
-          name: store.name,
-          description: store.description || '',
-          imageUrl: store.imageUrl || '',
-          isActive: store.isActive
-        });
-      }
-    } catch {
-      toast.error('Error al cargar los datos de la tienda');
-    }
-  }, [storeId, form]);
-
   useEffect(() => {
-    if (mode === 'edit' && storeId) {
-      fetchStore();
+    if (mode === 'edit' && store) {
+      form.reset({
+        name: store.name,
+        description: store.description || '',
+        imageUrl: store.imageUrl || '',
+        isActive: store.isActive
+      });
     }
-  }, [mode, storeId, fetchStore]);
+  }, [mode, store, form]);
 
   const onSubmit: SubmitHandler<StoreFormData> = async (validatedData) => {
     try {
@@ -76,6 +63,17 @@ export default function StoreForm({ mode, storeId }: StoreFormProps) {
     }
   };
 
+
+  if (mode === 'edit' && isStoreLoading) {
+    return (
+      <div className="container mx-auto p-8">
+        <div className="flex items-center justify-center min-h-96">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Cargando tienda...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-8">
