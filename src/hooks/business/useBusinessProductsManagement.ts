@@ -79,6 +79,19 @@ const updateProduct = async ({ productId, data }: { productId: string; data: Upd
   return response.json();
 };
 
+const createProduct = async (productData: any) => {
+  const response = await fetch('/api/business/products', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(productData),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Error al crear el producto');
+  }
+  return response.json();
+};
+
 const deleteProduct = async (productId: string) => {
   const response = await fetch(`/api/business/products/${productId}`, {
     method: 'DELETE'
@@ -109,6 +122,25 @@ export const useBusinessProductsManagement = (filters: ProductsFilters) => {
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     enabled: true,
+  });
+};
+
+export const useCreateProduct = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: createProduct,
+    onSuccess: (newProduct) => {
+      toast.success('Producto creado exitosamente');
+      
+      // Invalidate all product-related queries to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ['business', 'products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] }); // For public products
+      queryClient.invalidateQueries({ queryKey: ['business', 'stores'] }); // Store product count might change
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Error al crear el producto');
+    },
   });
 };
 
@@ -152,7 +184,7 @@ export const useUpdateProduct = () => {
       
       toast.error('Error al actualizar el producto');
     },
-    onSuccess: () => {
+    onSuccess: (updatedProduct) => {
       toast.success('Producto actualizado exitosamente');
       
       // Invalidate to ensure fresh data
@@ -160,6 +192,8 @@ export const useUpdateProduct = () => {
         queryKey: ['business', 'products', 'management'],
         refetchType: 'none'
       });
+      queryClient.invalidateQueries({ queryKey: ['products'] }); // For public products
+      queryClient.invalidateQueries({ queryKey: ['product', updatedProduct.id] }); // Specific product
     },
     onSettled: () => {
       // Always refetch after 2 seconds to ensure consistency

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,6 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { productSchema, ProductFormData } from '@/lib/validations/product';
+import { useBusinessStores } from '@/hooks/business/useBusinessStores';
+import { useCreateProduct, useUpdateProduct } from '@/hooks/business/useBusinessProductsManagement';
 import Link from 'next/link';
 
 interface Store {
@@ -28,7 +30,9 @@ interface ProductFormProps {
 
 export default function ProductForm({ mode, productId }: ProductFormProps) {
   const router = useRouter();
-  const [stores, setStores] = useState<Store[]>([]);
+  const { data: stores = [] } = useBusinessStores();
+  const createProductMutation = useCreateProduct();
+  const updateProductMutation = useUpdateProduct();
 
   const form = useForm({
     resolver: zodResolver(productSchema),
@@ -44,17 +48,6 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
     }
   });
 
-  const fetchStores = async () => {
-    try {
-      const response = await fetch('/api/business/stores');
-      if (response.ok) {
-        const data = await response.json();
-        setStores(data.stores);
-      }
-    } catch {
-      toast.error('Error al cargar las tiendas');
-    }
-  };
 
   const fetchProduct = useCallback(async () => {
     if (!productId) return;
@@ -78,9 +71,6 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
     }
   }, [productId, form]);
 
-  useEffect(() => {
-    fetchStores();
-  }, []);
 
   useEffect(() => {
     if (mode === 'edit' && productId) {
@@ -90,42 +80,15 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
 
   const onSubmit: SubmitHandler<ProductFormData> = async (validatedData) => {
     try {
-      const url = mode === 'create' 
-        ? '/api/business/products'
-        : `/api/business/products/${productId}`;
-      
-      const method = mode === 'create' ? 'POST' : 'PUT';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(validatedData)
-      });
-
-      if (response.ok) {
-        toast.success(
-          mode === 'create' 
-            ? 'Producto creado exitosamente' 
-            : 'Producto actualizado exitosamente',
-          {
-            position: 'top-center',
-            richColors: true,
-          }
-        );
-        router.push('/dashboard/products');
-      } else {
-        const error = await response.json();
-        toast.error(error.message || 'Error al procesar la solicitud', {
-          position: 'top-center',
-          richColors: true,
-        });
+      if (mode === 'create') {
+        await createProductMutation.mutateAsync(validatedData);
+      } else if (productId) {
+        await updateProductMutation.mutateAsync({ productId, data: validatedData });
       }
+      router.push('/dashboard/products');
     } catch (error) {
+      // Error handling is now done in the mutation hooks
       console.error('Error processing form:', error);
-      toast.error('Error inesperado. Por favor, intenta nuevamente.', {
-        position: 'top-center',
-        richColors: true,
-      });
     }
   };
 
@@ -306,10 +269,10 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
                 <div className="flex gap-4 pt-4">
                   <Button 
                     type="submit" 
-                    disabled={form.formState.isSubmitting}
+                    disabled={createProductMutation.isPending || updateProductMutation.isPending}
                     className="flex-1"
                   >
-                    {form.formState.isSubmitting ? (
+                    {(createProductMutation.isPending || updateProductMutation.isPending) ? (
                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Procesando...</>
                     ) : (
                       mode === 'create' ? 'Crear Producto' : 'Actualizar Producto'
