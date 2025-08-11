@@ -56,11 +56,11 @@ export default function CheckoutForm() {
       const orderTotal = orderData.items.reduce((sum: number, item: OrderItem) => sum + item.totalPrice, 0);
       
       const order = {
-        customerId: user.id,
-        storeId: storeId,
-        storeSlug: orderData.storeSlug,
-        items: orderData.items,
-        totalAmount: orderTotal
+        items: orderData.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          storeId: storeId
+        }))
       };
 
       try {

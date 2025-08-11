@@ -25,6 +25,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = checkoutSchema.parse(body);
 
+    console.log('API Orders - session.user:', session.user);
+    console.log('API Orders - customerId:', session.user.id);
+
     // Process checkout using CustomerCheckoutService
     const result = await CustomerServices.CustomerCheckoutService.processCheckout({
       items: validatedData.items,

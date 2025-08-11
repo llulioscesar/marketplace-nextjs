@@ -117,6 +117,31 @@ export class CustomerCheckoutService {
     const { items, customerId, shippingAddress, notes } = checkoutData;
 
     try {
+      console.log('ProcessCheckout - customerId:', customerId);
+      
+      // Verificar que el cliente existe
+      const customer = await prisma.user.findUnique({
+        where: { 
+          id: customerId
+        }
+      });
+
+      console.log('Customer found:', customer);
+
+      if (!customer) {
+        return {
+          success: false,
+          errors: ['Cliente no encontrado o no válido']
+        };
+      }
+
+      if (customer.role !== 'CUSTOMER') {
+        return {
+          success: false,
+          errors: ['Usuario no es un cliente válido']
+        };
+      }
+
       // Validar items
       const validation = await this.validateCheckout(items);
       
@@ -179,11 +204,12 @@ export class CustomerCheckoutService {
               status: 'PENDING',
               shippingAddress,
               notes,
-              orderItems: {
+              items: {
                 create: storeItems.map(item => ({
                   productId: item.productId,
                   quantity: item.quantity,
-                  price: item.price,
+                  unitPrice: item.price,
+                  totalPrice: item.price * item.quantity,
                 })),
               },
             },

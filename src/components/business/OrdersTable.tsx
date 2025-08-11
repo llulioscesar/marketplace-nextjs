@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -162,8 +163,8 @@ export default function OrdersTable({ orders, onUpdateStatus }: OrdersTableProps
             </thead>
             <tbody>
               {orders.map((order) => (
-                <>
-                  <tr key={order.id} className="border-b hover:bg-gray-50">
+                <React.Fragment key={order.id}>
+                  <tr className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div className="font-medium">
                         #{order.id.slice(-8)}
@@ -275,7 +276,7 @@ export default function OrdersTable({ orders, onUpdateStatus }: OrdersTableProps
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               ))}
             </tbody>
           </table>

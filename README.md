@@ -358,17 +358,11 @@ NEXTAUTH_URL=https://tu-dominio.com
 NEXTAUTH_SECRET=tu-secret-key-super-segura-en-produccion
 ```
 
-### Recomendaciones de Hosting
-
-- **Aplicación:** Vercel, Railway, Render
-- **Base de Datos:** Supabase, Neon, Railway PostgreSQL
-
 ## 🔒 Seguridad
 
 - ✅ Autenticación con JWT mediante NextAuth
 - ✅ Validación de datos con Zod en cliente y servidor
 - ✅ Protección CSRF automática
-- ✅ Rate limiting en APIs críticas
 - ✅ Sanitización de inputs
 - ✅ Permisos basados en roles (Business/Customer)
 - ✅ Validación de autorización en cada endpoint
