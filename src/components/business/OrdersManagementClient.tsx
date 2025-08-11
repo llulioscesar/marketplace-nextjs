@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, FileText } from 'lucide-react';
+import { ShoppingCart, FileText, ArrowLeft } from 'lucide-react';
 import { Pagination } from '@/components/common';
 import OrderFilters from './OrderFilters';
 import OrdersGrid from './OrdersGrid';
@@ -12,6 +12,7 @@ import { useBusinessStore } from '@/stores/businessStore';
 import { useOrders, useUpdateOrderStatus } from '@/hooks/business/useOrders';
 import { useBusinessStores } from '@/hooks/business/useBusinessStores';
 import { useDebounce } from '@/hooks/common/useDebounce';
+import Link from 'next/link';
 
 interface User {
   id: string;
@@ -94,6 +95,10 @@ export default function OrdersManagementClient({}: OrdersManagementProps) {
     return (
       <div className="container mx-auto p-8">
         <div className="mb-8">
+          <Link href="/dashboard" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Volver al Dashboard
+          </Link>
           <h1 className="text-3xl font-bold mb-2">Gestión de Órdenes</h1>
           <p className="text-gray-600">Administra todas las órdenes de tus tiendas</p>
         </div>
@@ -120,6 +125,10 @@ export default function OrdersManagementClient({}: OrdersManagementProps) {
     return (
       <div className="container mx-auto p-8">
         <div className="mb-8">
+          <Link href="/dashboard" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Volver al Dashboard
+          </Link>
           <h1 className="text-3xl font-bold mb-2">Gestión de Órdenes</h1>
           <p className="text-gray-600">Administra todas las órdenes de tus tiendas</p>
         </div>
@@ -146,6 +155,10 @@ export default function OrdersManagementClient({}: OrdersManagementProps) {
   return (
     <div className="container mx-auto p-8">
       <div className="mb-8">
+        <Link href="/dashboard" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Volver al Dashboard
+        </Link>
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold mb-2">Gestión de Órdenes</h1>

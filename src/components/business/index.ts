@@ -12,6 +12,8 @@ export { default as BusinessStoreCard } from './StoreCard';
 export { default as StoreTable } from './StoreTable';
 export { default as StoresGrid } from './StoresGrid';
 export { default as OrdersManagementClient } from './OrdersManagementClient';
+export { default as OrderDetailClient } from './OrderDetailClient';
+export { OrderDetailWrapper } from './OrderDetailWrapper';
 export { default as OrderFilters } from './OrderFilters';
 export { default as OrdersGrid } from './OrdersGrid';
 export { default as OrdersTable } from './OrdersTable';

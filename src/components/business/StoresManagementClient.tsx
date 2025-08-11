@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Store, Plus } from 'lucide-react';
+import { Store, Plus, ArrowLeft } from 'lucide-react';
 import { Pagination } from '@/components/common';
 import StoreFilters from './StoreFilters';
 import StoresGrid from './StoresGrid';
@@ -100,6 +100,10 @@ export default function StoresManagementClient({}: StoresManagementProps) {
     return (
       <div className="container mx-auto p-8">
         <div className="mb-8">
+          <Link href="/dashboard" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Volver al Dashboard
+          </Link>
           <h1 className="text-3xl font-bold mb-2">Gestión de Tiendas</h1>
           <p className="text-gray-600">Administra todas tus tiendas</p>
         </div>
@@ -126,6 +130,10 @@ export default function StoresManagementClient({}: StoresManagementProps) {
     return (
       <div className="container mx-auto p-8">
         <div className="mb-8">
+          <Link href="/dashboard" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Volver al Dashboard
+          </Link>
           <h1 className="text-3xl font-bold mb-2">Gestión de Tiendas</h1>
           <p className="text-gray-600">Administra todas tus tiendas</p>
         </div>
@@ -152,6 +160,10 @@ export default function StoresManagementClient({}: StoresManagementProps) {
   return (
     <div className="container mx-auto p-8">
       <div className="mb-8">
+        <Link href="/dashboard" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Volver al Dashboard
+        </Link>
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold mb-2">Gestión de Tiendas</h1>
